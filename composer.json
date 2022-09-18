@@ -1,0 +1,20 @@
+{
+  "name": "365taofang/airflow-php-dagrun",
+  "description": "AIRFLOW DAGRUN PHP SDK",
+  "license": "Apache-2.0",
+  "version": "1.0.0",
+  "require": {
+    "php": ">=5.6.0",
+    "guzzlehttp/guzzle": "^6.3.0",
+    "ext-json": "*"
+  },
+  "keywords": [
+    "airflow",
+    "php"
+  ],
+  "autoload": {
+    "psr-4": {
+      "Airflow\\": "Airflow/"
+    }
+  }
+}
