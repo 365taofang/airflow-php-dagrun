@@ -9,50 +9,87 @@ use GuzzleHttp\Psr7\Request;
 class AirflowClient
 {
     const SDK_VERSION = '1.0.0';
+    const AIRFLOW_DAG_ID = 'advertising_platform.batch_requests';
+    const DEFAULT_TIMEOUT = 30;
 
-    private $airflow_host;
-    private $airflow_dag_id;
+    private $airflow_url;
     private $request = array();
+
+    //公共参数
+    private $common_query_params = array();
+    private $headers = array();
+    private $cookies = array();
+
 
     /** @var Client */
     protected $httpClient;
 
-    /**
-     * @param $airflow_host string
-     * @param $airflow_username string
-     * @param $airflow_password string
-     */
-    public function __construct($airflow_host, $airflow_username, $airflow_password)
+    public function __construct()
     {
-        $this->airflow_host = $airflow_host;
+        $airflow_host = getenv('AIRFLOW_HOST');
+        $airflow_username = getenv('AIRFLOW_USERNAME');
+        $airflow_password = getenv('AIRFLOW_PASSWORD');
 
+        $this->airflow_url = "{$airflow_host}/dags/" . self::AIRFLOW_DAG_ID . "/dagRuns";
         $this->httpClient = new Client(array(
             "auth" => array($airflow_username, $airflow_password),
         ));
     }
 
     /**
-     * @param $dag_id string dag id
+     * 设置公共请求参数，如携带token等
+     * @param $common_params array 通用params参数
+     * @return $this
+     */
+    public function setCommonQueryParams($common_query_params)
+    {
+        $this->common_query_params = $common_query_params;
+        return $this;
+    }
+
+    /**
+     * 设置批量请求头信息
+     * @param $headers array 请求头
+     * @return $this
+     */
+    public function setHeaders($headers)
+    {
+        $this->headers = $headers;
+        return $this;
+    }
+
+    /**
+     * 设置批量cookie
+     * @param $cookies array cookie
+     * @return $this
+     */
+    public function setCookies($cookies)
+    {
+        $this->cookies = $cookies;
+        return $this;
+    }
+
+    /**
      * @param $url string 批量请求的url
      * @param $method string 批量请求的方法 get\post\put\delete\patch
-     * @param $params_list array 批量请求的参数列表
-     * @param $headers array 批量请求头
+     * @param $timeout int 超时时间
      * @return bool
      * @throws \Exception
      * @throws GuzzleException
      */
-    public function triggerDagRun($dag_id, $url, $method, $params_list = array(), $headers = array())
+    public function batchRequest($method, $url, $params, $timeout = self::DEFAULT_TIMEOUT)
     {
-        $this->airflow_dag_id = $dag_id;
-
         $this->request = array(
             "conf" => array(
+                "timeout" => $timeout,
                 "common_params" => array(
                     "method" => strtoupper($method),
                     "url" => $url,
-                    "header" => $headers
+                    "params" => $this->common_query_params,
+                    "headers" => $this->headers,
+                    "cookies" => $this->cookies
                 ),
-                "request_params_list" => $params_list,
+                "request_params_list" => $params
             )
         );
 
@@ -65,6 +102,8 @@ class AirflowClient
      */
     private function _validData()
     {
+        if ($this->request["conf"]["timeout"] < 1) throw new \Exception('超时时间不得小于1秒');
+
         $validMethod = array('GET', 'POST', 'PUT', 'DELETE', 'PATCH');
         if (!in_array($this->request["conf"]["common_params"]["method"], $validMethod)) throw new \Exception("method参数不合法");
     }
@@ -78,14 +117,13 @@ class AirflowClient
         $headers = array(
             "Content-type" => "application/json"
         );
-        $url = "{$this->airflow_host}/dags/{$this->airflow_dag_id}/dagRuns";
-        $request = new Request('POST', $url, $headers, json_encode($this->request));
+        $request = new Request('POST', $this->airflow_url, $headers, json_encode($this->request));
         $response = $this->httpClient->send($request);
         $code = $response->getStatusCode();
-        if ($code == 200) {
-            return true;
+        if ($code > 300) {
+            throw new \Exception("请求失败，错误状态码{$code}");
         }
-        throw new \Exception("请求失败，错误状态码{$code}");
+        return true;
     }
 
 }
