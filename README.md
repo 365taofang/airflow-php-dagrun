@@ -27,7 +27,6 @@ $client->setCookies(array("csrf_token" => '123456')); # 可省略
  *      params：设置get请求携带参数，或者url参数，如果commonQueryParams有相同的key，将会被commonQueryParams设置的值覆盖
  *      data：设置post请求参数，如form-data等，不可和json参数同时设置
  *      json：设置json请求体内容，不可和data参数同时设置
-        content
         $requestParam = array(
             array('params' => array("p" => "01")),
             array('json' => array('{"j":"02"}')),
