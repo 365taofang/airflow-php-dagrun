@@ -36,12 +36,12 @@ class AirflowClient
      * @param $url string 批量请求的url
      * @param $method string 批量请求的方法 get\post\put\delete\patch
      * @param $params_list array 批量请求的参数列表
-     * @param $header string 批量请求头
+     * @param $headers array 批量请求头
      * @return bool
      * @throws \Exception
      * @throws GuzzleException
      */
-    public function triggerDagRun($dag_id, $url, $method, $params_list = array(), $header = "")
+    public function triggerDagRun($dag_id, $url, $method, $params_list = array(), $headers = array())
     {
         $this->airflow_dag_id = $dag_id;
 
@@ -49,20 +49,20 @@ class AirflowClient
             "conf" => array(
                 "common_params" => array(
                     "method" => strtoupper($method),
-                    "url" => $url
+                    "url" => $url,
+                    "header" => $headers
                 ),
                 "request_params_list" => $params_list,
             )
         );
 
-        if (!empty($header)) {
-            $this->request["conf"]["common_params"]["header"] = $header;
-        }
-
         $this->_validData();
         return $this->_triggerDagRun();
     }
 
+    /**
+     * @throws \Exception
+     */
     private function _validData()
     {
         $validMethod = array('GET', 'POST', 'PUT', 'DELETE', 'PATCH');
@@ -71,6 +71,7 @@ class AirflowClient
 
     /**
      * @throws GuzzleException
+     * @throws \Exception
      */
     private function _triggerDagRun()
     {
